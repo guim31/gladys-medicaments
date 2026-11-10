@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-10
+
 ### Added
 
 - Medication reminders stored in Gladys (`/data/medications.json`), with no
@@ -26,3 +28,6 @@ the notes of the version's GitHub Release.
 - Scene actions: mark a medication as taken, read a treatment's day.
 - Documentation in English, French, German and Spanish, with a scene example:
   missed intake, message to a relative.
+
+[Unreleased]: https://github.com/guim31/gladys-medicaments/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guim31/gladys-medicaments/releases/tag/v1.0.0

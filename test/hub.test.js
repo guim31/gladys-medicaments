@@ -326,3 +326,78 @@ test('slot records are pruned after a week, and the file stays valid', async (t)
     slots.join(),
   );
 });
+
+test('a schedule change keeps the intake already due, and its missed event', async (t) => {
+  const w = await world(t, { dataDir: emptyDataDir() });
+  await w.fake.action('create_treatment', { name: 'Matin', times: '10:30, 20:00' });
+  await run(w, 40); // 10:40: due, not missed yet (30 min)
+  assert.equal(events(w, 'intake_due').length, 1);
+  await w.fake.action('update_treatment', { name: 'Matin', times: '10:30, 20:00, 22:00' });
+  await run(w, 20); // 11:00
+  assert.equal(events(w, 'intake_missed').length, 1, 'the 10:30 pill is still followed');
+  assert.equal(w.hub.status(w.hub.treatments[0]).planned, 3);
+});
+
+test('a "stock low" refused by Gladys is sent again', async (t) => {
+  const w = await world(t, { dataDir: emptyDataDir() });
+  await w.fake.action('create_treatment', {
+    name: 'Boîte',
+    times: '08:00',
+    stock: '6',
+    stock_alert: 5,
+  });
+  const original = w.gladys.publishSceneEvent.bind(w.gladys);
+  w.gladys.publishSceneEvent = async () => {
+    throw new Error('HTTP 503');
+  };
+  await w.fake.action('update_treatment', { name: 'Boîte', stock: '5' });
+  assert.equal(w.hub.treatments[0].stock_low_notified, false);
+  w.gladys.publishSceneEvent = original;
+  await run(w, 1);
+  assert.equal(events(w, 'stock_low').length, 1);
+  await run(w, 5);
+  assert.equal(events(w, 'stock_low').length, 1, 'once');
+});
+
+test('cancelling an intake gives back only what was taken from the stock', async (t) => {
+  const w = await world(t, { dataDir: emptyDataDir() });
+  await w.fake.action('create_treatment', { name: 'Fin', times: '10:30', dose: 2, stock: '1' });
+  const id = w.hub.treatments[0].id;
+  await w.fake.widgetAction('today', 'take', {}, { values: { intake: `${id}|2026-11-09T10:30` } });
+  assert.equal(w.hub.treatments[0].stock, 0);
+  await w.fake.widgetAction('today', 'undo', {}, { values: { intake: `${id}|2026-11-09T10:30` } });
+  assert.equal(w.hub.treatments[0].stock, 1);
+});
+
+test('daylight saving: in autumn, missed after the delay, not an hour later', async (t) => {
+  const clock = createClock(Date.UTC(2026, 9, 24, 10, 0));
+  const w = await world(t, { dataDir: emptyDataDir(), clock });
+  await w.fake.action('create_treatment', { name: 'Nuit', times: '02:30' });
+  await run(w, (Date.UTC(2026, 9, 25, 0, 30) - clock.time) / MINUTE); // first 02:30
+  assert.equal(events(w, 'intake_due').length, 1);
+  await run(w, 30); // 01:00 UTC, the clock shows 02:00 again
+  const missed = events(w, 'intake_missed');
+  assert.equal(missed.length, 1);
+  assert.equal(missed[0].data.minutes_late, 30);
+});
+
+test('over ten rows, the widget shows the intakes that matter now', async (t) => {
+  const w = await world(t, { dataDir: emptyDataDir() });
+  for (const name of ['A', 'B', 'C']) {
+    await w.fake.action('create_treatment', { name, times: '10:30, 12:00, 14:00, 19:00' });
+  }
+  w.clock.advance(8 * 3600_000); // 18:00
+  for (const treatment of w.hub.treatments) {
+    for (const time of ['10:30', '12:00', '14:00']) {
+      await w.fake.sceneAction('mark_taken', {
+        treatment: deviceIds(w.gladys, treatment.id).device,
+        time,
+      });
+    }
+  }
+  const get = await w.fake.widgetGet('today', { settings: {}, language: 'en' });
+  const { items } = get.data.content.components[1];
+  assert.equal(items.length, 10);
+  assert.equal(items.filter((item) => item.value === 'Upcoming').length, 3);
+  assert.equal(items.at(-1).value, 3, 'three earliest taken rows folded');
+});

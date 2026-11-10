@@ -6,7 +6,16 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TENSION, VITAMIN, createAll, createWorld, deviceIds } from './helpers/world.js';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import {
+  TENSION,
+  VITAMIN,
+  createAll,
+  createWorld,
+  deviceIds,
+  emptyDataDir,
+} from './helpers/world.js';
 
 function captureLogs(t, level = 'info') {
   const previous = process.env.LOG_LEVEL;
@@ -84,4 +93,14 @@ test('one line per change asked by the user', async (t) => {
     logs.texts()[0],
     /Intake marked as taken \(treatment 0f1e2d3c4b5a, 120 min before its time, scene\)/,
   );
+});
+
+test('a broken file never puts its content in the logs', async (t) => {
+  const logs = captureLogs(t, 'debug');
+  const dataDir = emptyDataDir();
+  writeFileSync(join(dataDir, 'medications.json'), 'Kardegic Josiane');
+  await world(t, { dataDir });
+  const all = logs.texts().join('\n');
+  assert.match(all, /SyntaxError/);
+  assert.ok(!all.includes('Kardegic') && !all.includes('Josiane'), all);
 });

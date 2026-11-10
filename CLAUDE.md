@@ -268,13 +268,18 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - **Heure locale** : les slots se comparent en chaînes à `localNow(now, TZ)`. Le **délai d'oubli court en temps
   réel** (`instantOf`) : au passage à l'heure d'été, 02:30 n'existe pas, il est dû à 03:00 et son délai part de
   03:30 (décalage de la veille), jamais « oublié » à la minute où il devient dû. En automne, le 02:30 doublé n'est
-  signalé qu'une fois (état enregistré).
-- **`since`** (création ou dernier changement d'horaire) : les slots d'avant ne sont ni prévus ni oubliés ; les prises
-  faites ce jour-là comptent toujours (`slotsOn`).
+  signalé qu'une fois et reste « oublié » quand l'horloge repasse à 02:00 (`slotState` compare d'abord l'instant ;
+  `pastSlots` regarde une heure devant l'horloge).
+- **`since`** (création ou dernier changement d'horaire) : les slots d'avant ne sont ni prévus ni oubliés, sauf ceux
+  qui ont déjà un enregistrement (prise déjà signalée, faite) : ajouter une heure ne fait pas disparaître la pilule
+  du matin en retard (`slotsOn`).
 - **Déclencheurs** : `intake_due` quand l'heure arrive (pas si la prise est déjà notée), `intake_missed` à la fin du
   délai, chacun une fois, enregistré seulement après acceptation par Gladys (`sentPending` évite un doublon si
   l'écriture échoue). Fenêtre de 24 h : après un long arrêt, les prises manquées partent en « oubliée », jamais en
-  « c'est l'heure ». `stock_low` une fois au franchissement du seuil, réarmé au-dessus.
+  « c'est l'heure ». `stock_low` part du minuteur (lancé aussi juste après chaque modification), `stock_low_notified` posé seulement après
+  acceptation, réarmé au-dessus du seuil. `stock_used` garde ce qui a vraiment été retiré du stock (rendu à
+  l'annulation). Un JSON illisible n'est journalisé que par son type et sa position (le message cite le début du
+  fichier).
 - **« Pris » sans heure** : la prise non faite la plus proche à ±12 h (égalité : la plus ancienne). Une prise notée en
   avance compte pour son heure et ne déclenche rien.
 - **Formulaires** : les champs vides de `update_treatment` gardent la valeur, `-` efface (personne, dernier jour,

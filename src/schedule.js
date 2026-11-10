@@ -257,8 +257,9 @@ export function scheduledOn(treatment, date) {
 
 /**
  * The slots of a treatment on a local date. Slots before `since` (the
- * creation or the last schedule change) are left out: a new schedule never
- * makes the earlier hours of the day "missed". The intakes taken that day
+ * creation or the last schedule change) are left out, unless they were
+ * already notified ("time to take" sent): a new schedule never makes the
+ * earlier hours of the day "missed", and never hides a pill already due. The intakes taken that day
  * always count, even when the schedule changed since.
  */
 export function slotsOn(treatment, date) {
@@ -270,7 +271,8 @@ export function slotsOn(treatment, date) {
   if (scheduledOn(treatment, date)) {
     for (const time of treatment.times) {
       const slot = `${date}T${time}`;
-      if (slot >= treatment.since) {
+      // A slot already notified was planned before the change: it stays.
+      if (slot >= treatment.since || treatment.slots[slot]) {
         slots.add(slot);
       }
     }

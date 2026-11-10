@@ -25,6 +25,12 @@ export const FILE_NAME = 'medications.json';
 // Parse and shape errors: the file is broken. Any other error (EACCES, EIO…)
 // is a problem of the disk, not of the content.
 const isCorrupt = (err) => err instanceof SyntaxError || err instanceof TypeError;
+// A JSON error message quotes the start of the file (health data): only its
+// kind and position reach the logs.
+const describe = (err) =>
+  isCorrupt(err)
+    ? `${err.name}${err.message.match(/ at position \d+/)?.[0] ?? ''}`
+    : (err.code ?? err.name);
 
 export class TreatmentStore {
   constructor(directory = process.env.MEDICATIONS_DATA_DIR || '/data') {
@@ -90,7 +96,7 @@ export class TreatmentStore {
               return copyFile(this.path, dated).then(() => dated);
             }));
         this.mainUnreadable = true;
-        logger.error(`Cannot read ${this.path} (${err.message}): kept as ${kept}`);
+        logger.error(`Cannot read ${this.path} (${describe(err)}): kept as ${kept}`);
       }
     }
     try {
@@ -104,7 +110,7 @@ export class TreatmentStore {
         throw err;
       }
       if (err.code !== 'ENOENT') {
-        logger.error(`Cannot read ${this.backupPath} either (${err.message})`);
+        logger.error(`Cannot read ${this.backupPath} either (${describe(err)})`);
       }
     }
     if (mainProblem) {

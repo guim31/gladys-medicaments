@@ -61,6 +61,12 @@ const WINDOW_MINUTES = 24 * 60;
 const NEAREST_MINUTES = 12 * 60;
 const ALL_DAYS = [1, 2, 3, 4, 5, 6, 7];
 
+/** True when the stock is at or below its alert level, false above, null untracked. */
+const stockLow = (treatment) =>
+  treatment.stock === null || treatment.stock_alert === null
+    ? null
+    : treatment.stock <= treatment.stock_alert;
+
 const empty = (value) => value === undefined || value === null || String(value).trim() === '';
 const clears = (value) => typeof value === 'string' && value.trim() === '-';
 
@@ -222,19 +228,33 @@ export class TreatmentsHub {
     if (treatment.slots[slot]?.taken_at) {
       return 'taken';
     }
-    if (local.minute < slot) {
+    // In real time, across a daylight saving change too: the clock shows the
+    // repeated autumn hour again, the intake is no longer "upcoming".
+    const instant = instantOf(slot, this.timeZone);
+    if (local.minute < slot && local.at < instant) {
       return 'upcoming';
     }
-    // The delay runs in real time: across a daylight saving change too.
-    const late = local.at >= instantOf(slot, this.timeZone) + treatment.grace * 60_000;
-    return late ? 'late' : 'due';
+    return local.at >= instant + treatment.grace * 60_000 ? 'late' : 'due';
   }
 
   /** The intakes of the last 24 hours not taken and past their grace delay. */
   lateSlots(treatment, local = this.local()) {
-    return slotsBetween(treatment, addMinutes(local.minute, -WINDOW_MINUTES), local.minute).filter(
+    return this.pastSlots(treatment, local).filter(
       (slot) => this.slotState(treatment, slot, local) === 'late',
     );
+  }
+
+  /**
+   * The intakes of the last 24 hours whose time has come. One hour ahead of
+   * the clock is looked at too: during the repeated autumn hour, the clock
+   * shows 02:00 again after a 02:30 intake.
+   */
+  pastSlots(treatment, local) {
+    return slotsBetween(
+      treatment,
+      addMinutes(local.minute, -WINDOW_MINUTES),
+      addMinutes(local.minute, 60),
+    ).filter((slot) => this.slotState(treatment, slot, local) !== 'upcoming');
   }
 
   /** Figures of a treatment now: next intake text, taken / planned today, late. */
@@ -355,9 +375,10 @@ export class TreatmentsHub {
    * Run one change on a copy of the document, write it, then make it current
    * and send its effects. `change(draft, effects)` fills `effects.events`,
    * sets `effects.changed`, and `effects.structure` when devices change.
-   * @param {{ source?: string }} [options] `widget`: the core reloads the widget itself
+   * @param {{ source?: string, tick?: boolean }} [options] `widget`: the core
+   *   reloads the widget itself; `tick`: run the timer once done (stock alert)
    */
-  mutate(change, { source } = {}) {
+  mutate(change, { source, tick = false } = {}) {
     const run = this.queue.then(async () => {
       if (!this.loaded) {
         throw new Error('The treatments are not loaded: see the integration logs');
@@ -386,7 +407,7 @@ export class TreatmentsHub {
       return result;
     });
     this.queue = run.catch(() => {});
-    return run;
+    return tick ? this.afterChange(run) : run;
   }
 
   draftTreatment(draft, { device, treatmentId }) {
@@ -423,25 +444,22 @@ export class TreatmentsHub {
     };
   }
 
-  /** Fire "stock low" once when the stock reaches the alert level; re-armed above it. */
-  checkStock(treatment, effects) {
-    if (treatment.stock === null || treatment.stock_alert === null) {
+  /**
+   * Re-arm "stock low" once the stock is above its alert level (or no longer
+   * tracked). The event itself goes out from the timer (`checkIntakes`), and
+   * `stock_low_notified` is set only once Gladys accepted it.
+   */
+  checkStock(treatment) {
+    if (stockLow(treatment) === false) {
       treatment.stock_low_notified = false;
-      return;
     }
-    if (treatment.stock > treatment.stock_alert) {
-      treatment.stock_low_notified = false;
-    } else if (!treatment.stock_low_notified) {
-      treatment.stock_low_notified = true;
-      effects.events.push({
-        key: TRIGGERS.STOCK_LOW,
-        data: {
-          ...this.eventBase(treatment),
-          stock: Math.floor(treatment.stock),
-          days_left: this.daysLeft(treatment),
-        },
-      });
-    }
+  }
+
+  /** Run the timer right after a change: "stock low" goes out at once. */
+  async afterChange(change) {
+    const result = await change;
+    await this.tick();
+    return result;
   }
 
   /**
@@ -562,78 +580,84 @@ export class TreatmentsHub {
   }
 
   createTreatment(fields = {}) {
-    return this.mutate((draft, effects) => {
-      const name = cleanText(fields.name, LIMITS.name);
-      if (!name) {
-        throw new UserError('emptyName');
-      }
-      if (draft.treatments.some((entry) => matchKey(entry.name) === matchKey(name))) {
-        throw new UserError('nameTaken', name);
-      }
-      if (draft.treatments.length >= LIMITS.treatments) {
-        throw new UserError('tooMany', '', '', LIMITS.treatments);
-      }
-      const ids = new Set(draft.treatments.map((entry) => entry.id));
-      let id = newId();
-      while (ids.has(id)) {
-        id = newId();
-      }
-      const local = this.local();
-      const treatment = {
-        id,
-        name,
-        person: '',
-        times: [],
-        days: [...ALL_DAYS],
-        every: 1,
-        start: local.date,
-        end: null,
-        since: local.minute,
-        grace: DEFAULT_GRACE,
-        dose: 1,
-        stock: null,
-        stock_alert: null,
-        stock_low_notified: false,
-        created_at: new Date(this.now()).toISOString(),
-        slots: {},
-      };
-      this.applyFields(treatment, fields, { creating: true });
-      this.checkStock(treatment, effects);
-      draft.treatments.push(treatment);
-      Object.assign(effects, { structure: true, changed: true });
-      logger.info(`Treatment ${id} created`);
-      return treatment;
-    });
+    return this.mutate(
+      (draft, effects) => {
+        const name = cleanText(fields.name, LIMITS.name);
+        if (!name) {
+          throw new UserError('emptyName');
+        }
+        if (draft.treatments.some((entry) => matchKey(entry.name) === matchKey(name))) {
+          throw new UserError('nameTaken', name);
+        }
+        if (draft.treatments.length >= LIMITS.treatments) {
+          throw new UserError('tooMany', '', '', LIMITS.treatments);
+        }
+        const ids = new Set(draft.treatments.map((entry) => entry.id));
+        let id = newId();
+        while (ids.has(id)) {
+          id = newId();
+        }
+        const local = this.local();
+        const treatment = {
+          id,
+          name,
+          person: '',
+          times: [],
+          days: [...ALL_DAYS],
+          every: 1,
+          start: local.date,
+          end: null,
+          since: local.minute,
+          grace: DEFAULT_GRACE,
+          dose: 1,
+          stock: null,
+          stock_alert: null,
+          stock_low_notified: false,
+          created_at: new Date(this.now()).toISOString(),
+          slots: {},
+        };
+        this.applyFields(treatment, fields, { creating: true });
+        this.checkStock(treatment);
+        draft.treatments.push(treatment);
+        Object.assign(effects, { structure: true, changed: true });
+        logger.info(`Treatment ${id} created`);
+        return treatment;
+      },
+      { tick: true },
+    );
   }
 
   updateTreatment(fields = {}) {
-    return this.mutate((draft, effects) => {
-      const treatment = this.draftByName(draft, fields.name);
-      const tracked = treatment.stock !== null;
-      if (!empty(fields.new_name)) {
-        const name = cleanText(fields.new_name, LIMITS.name);
-        if (
-          draft.treatments.some(
-            (entry) => entry !== treatment && matchKey(entry.name) === matchKey(name),
-          )
-        ) {
-          throw new UserError('nameTaken', name);
+    return this.mutate(
+      (draft, effects) => {
+        const treatment = this.draftByName(draft, fields.name);
+        const tracked = treatment.stock !== null;
+        if (!empty(fields.new_name)) {
+          const name = cleanText(fields.new_name, LIMITS.name);
+          if (
+            draft.treatments.some(
+              (entry) => entry !== treatment && matchKey(entry.name) === matchKey(name),
+            )
+          ) {
+            throw new UserError('nameTaken', name);
+          }
+          treatment.name = name;
         }
-        treatment.name = name;
-      }
-      this.applyFields(treatment, fields, { creating: false });
-      this.checkStock(treatment, effects);
-      Object.assign(effects, {
-        // A stock tracked or no longer tracked adds or removes a feature.
-        structure: true,
-        changed: true,
-      });
-      if (tracked !== (treatment.stock !== null)) {
-        logger.info(`Treatment ${treatment.id}: stock ${tracked ? 'no longer ' : ''}tracked`);
-      }
-      logger.info(`Treatment ${treatment.id} updated`);
-      return treatment;
-    });
+        this.applyFields(treatment, fields, { creating: false });
+        this.checkStock(treatment);
+        Object.assign(effects, {
+          // A stock tracked or no longer tracked adds or removes a feature.
+          structure: true,
+          changed: true,
+        });
+        if (tracked !== (treatment.stock !== null)) {
+          logger.info(`Treatment ${treatment.id}: stock ${tracked ? 'no longer ' : ''}tracked`);
+        }
+        logger.info(`Treatment ${treatment.id} updated`);
+        return treatment;
+      },
+      { tick: true },
+    );
   }
 
   deleteTreatment({ name } = {}) {
@@ -661,11 +685,13 @@ export class TreatmentsHub {
         if (record.taken_at) {
           return { treatment, slot: chosen, already: true };
         }
-        treatment.slots[chosen] = { ...record, taken_at: new Date(this.now()).toISOString() };
+        const taken = { ...record, taken_at: new Date(this.now()).toISOString() };
         if (treatment.stock !== null) {
-          treatment.stock = Math.max(0, treatment.stock - treatment.dose);
-          this.checkStock(treatment, effects);
+          // What was really taken from the stock, given back on a cancel.
+          taken.stock_used = Math.min(treatment.dose, treatment.stock);
+          treatment.stock -= taken.stock_used;
         }
+        treatment.slots[chosen] = taken;
         pruneSlots(treatment, local.date);
         effects.changed = true;
         const offset = minutesBetween(chosen, local.minute);
@@ -674,7 +700,7 @@ export class TreatmentsHub {
         );
         return { treatment, slot: chosen, already: false };
       },
-      { source },
+      { source, tick: true },
     );
   }
 
@@ -726,14 +752,15 @@ export class TreatmentsHub {
         }
         delete record.taken_at;
         if (treatment.stock !== null) {
-          treatment.stock = Math.min(LIMITS.stock, treatment.stock + treatment.dose);
-          this.checkStock(treatment, effects);
+          treatment.stock = Math.min(LIMITS.stock, treatment.stock + (record.stock_used ?? 0));
+          this.checkStock(treatment);
         }
+        delete record.stock_used;
         effects.changed = true;
         logger.info(`Intake cancelled (treatment ${treatment.id}${source ? `, ${source}` : ''})`);
         return { treatment, slot, changed: true };
       },
-      { source },
+      { source, tick: true },
     );
   }
 
@@ -787,8 +814,21 @@ export class TreatmentsHub {
     const pending = [];
     if (this.gladys.connected !== false) {
       for (const treatment of this.treatments) {
-        const from = addMinutes(local.minute, -WINDOW_MINUTES);
-        for (const slot of slotsBetween(treatment, from, local.minute)) {
+        if (stockLow(treatment) && !treatment.stock_low_notified) {
+          if (!this.sentPending.has(`${treatment.id}:stock:${TRIGGERS.STOCK_LOW}`)) {
+            pending.push({
+              treatmentId: treatment.id,
+              slot: 'stock',
+              key: TRIGGERS.STOCK_LOW,
+              data: {
+                ...this.eventBase(treatment),
+                stock: Math.floor(treatment.stock),
+                days_left: this.daysLeft(treatment),
+              },
+            });
+          }
+        }
+        for (const slot of this.pastSlots(treatment, local)) {
           const record = treatment.slots[slot] ?? {};
           const state = this.slotState(treatment, slot, local);
           const key =
@@ -823,6 +863,13 @@ export class TreatmentsHub {
         for (const { treatmentId, slot, key } of sent) {
           const treatment = draft.treatments.find((entry) => entry.id === treatmentId);
           if (!treatment) {
+            continue;
+          }
+          if (key === TRIGGERS.STOCK_LOW) {
+            if (stockLow(treatment)) {
+              treatment.stock_low_notified = true;
+              effects.changed = true;
+            }
             continue;
           }
           const record = (treatment.slots[slot] ??= {});

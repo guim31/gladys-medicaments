@@ -133,25 +133,35 @@ async function get(hub, { settings = {}, language = 'en' }) {
   if (rows.length === 0) {
     components.push({ type: 'text', variant: 'body', text: t(TEXT.nothingToday, language) });
   } else {
-    const items = rows.map((row) => ({
+    // Over ten rows, the ones that matter now: late, due, upcoming, then the
+    // latest taken; shown in time order.
+    const rank = { late: 0, due: 1, upcoming: 2, taken: 3 };
+    const kept =
+      rows.length <= MAX_ROWS
+        ? rows
+        : rows
+            .map((row, index) => ({ row, index }))
+            .sort(
+              (a, b) =>
+                rank[a.row.state] - rank[b.row.state] ||
+                (a.row.state === 'taken' ? b.index - a.index : a.index - b.index),
+            )
+            .slice(0, MAX_ROWS - 1)
+            .sort((a, b) => a.index - b.index)
+            .map(({ row }) => row);
+    const items = kept.map((row) => ({
       label: rowLabel(hub, row, local.date, language, withPerson),
       ...STYLE[row.state],
       value: rowValue(hub, row, language),
     }));
-    components.push({
-      type: 'status',
-      items:
-        items.length <= MAX_ROWS
-          ? items
-          : [
-              ...items.slice(0, MAX_ROWS - 1),
-              {
-                label: t(TEXT.more, language),
-                icon: 'more-horizontal',
-                value: items.length - MAX_ROWS + 1,
-              },
-            ],
-    });
+    if (rows.length > MAX_ROWS) {
+      items.push({
+        label: t(TEXT.more, language),
+        icon: 'more-horizontal',
+        value: rows.length - kept.length,
+      });
+    }
+    components.push({ type: 'status', items });
   }
   // The intakes to take first: the late and due ones, then the upcoming ones.
   const order = { late: 0, due: 1, upcoming: 2 };

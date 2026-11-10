@@ -9,7 +9,7 @@
 //       grace: 30 (minutes before an intake counts as missed),
 //       dose: 1, stock: number | null, stock_alert: number | null,
 //       stock_low_notified: false, created_at,
-//       slots: { 'YYYY-MM-DDTHH:MM': { taken_at?, due_sent?, missed_sent? } } }] }
+//       slots: { 'YYYY-MM-DDTHH:MM': { taken_at?, stock_used?, due_sent?, missed_sent? } } }] }
 //
 // Ids are random, generated here, and become the device external ids: never
 // derived from a name. `normalizeDocument` repairs what a hand edit or an
@@ -82,6 +82,9 @@ function normalizeSlots(raw) {
     }
     if (record.missed_sent === true) {
       clean.missed_sent = true;
+    }
+    if (clean.taken_at && Number.isFinite(record.stock_used) && record.stock_used >= 0) {
+      clean.stock_used = record.stock_used;
     }
     if (Object.keys(clean).length > 0) {
       slots[slot] = clean;

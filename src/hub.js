@@ -458,7 +458,8 @@ export class TreatmentsHub {
   /** Run the timer right after a change: "stock low" goes out at once. */
   async afterChange(change) {
     const result = await change;
-    await this.tick();
+    // The change is saved: a failing timer run must not report it as failed.
+    await this.tick().catch((err) => this.problem('tick', `Minute check failed: ${err.message}`));
     return result;
   }
 

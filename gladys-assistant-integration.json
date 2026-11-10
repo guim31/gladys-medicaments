@@ -1,177 +1,1157 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Medication reminders",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Medication reminders: intake times, Taken button, missed intake and low stock alerts. No cloud.",
+    "fr": "Rappels de médicaments : heures de prise, bouton Pris, alertes d'oubli et de stock bas. Sans cloud.",
+    "de": "Medikamenten-Erinnerungen: Einnahmezeiten, Taste Genommen, Alarme bei Vergessen und Bestand.",
+    "es": "Recordatorios de medicamentos: horas de toma, botón Tomado, alertas de olvido y existencias."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
-  "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "docker_image": "ghcr.io/guim31/gladys-medicaments:1.0.0",
+  "gladys_version": ">=5.2.0",
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-medicaments/main/cover.png",
+  "categories": ["services"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
-      "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+      "label": {
+        "en": "Your treatments",
+        "fr": "Vos traitements",
+        "de": "Deine Behandlungen",
+        "es": "Sus tratamientos"
       },
-      "links": [
+      "description": {
+        "en": "Not a medical device: a reminder, which can fail. Create a treatment with the buttons below, then add it in the Discovery tab: it becomes a device, for the dashboard (Intakes of the day widget) and the scenes. Everything stays in Gladys.",
+        "fr": "Pas un dispositif médical : un aide-mémoire, qui peut faillir. Créez un traitement avec les boutons ci-dessous, puis ajoutez-le dans l'onglet Découverte : il devient un appareil, pour le tableau de bord (widget Prises du jour) et les scènes. Tout reste dans Gladys.",
+        "de": "Kein Medizinprodukt: eine Gedächtnisstütze, die versagen kann. Erstelle eine Behandlung mit den Schaltflächen unten und füge sie im Tab Erkennung hinzu: So wird sie zu einem Gerät für das Dashboard (Widget Heutige Einnahmen) und Szenen. Alles bleibt in Gladys.",
+        "es": "No es un dispositivo médico: es un recordatorio, que puede fallar. Cree un tratamiento con los botones de abajo y añádalo en la pestaña Descubrimiento: se convierte en un dispositivo, para el panel (widget Tomas del día) y las escenas. Todo se queda en Gladys."
+      }
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the feature names",
+        "fr": "Langue des noms de fonctionnalités",
+        "de": "Sprache der Funktionsnamen",
+        "es": "Idioma de los nombres de funciones"
+      },
+      "description": {
+        "en": "Names given to the features when a treatment is added, and texts sent to scenes.",
+        "fr": "Noms donnés aux fonctionnalités à l'ajout d'un traitement, et textes envoyés aux scènes.",
+        "de": "Namen der Funktionen beim Hinzufügen einer Behandlung und an Szenen gesendete Texte.",
+        "es": "Nombres de las funciones al añadir un tratamiento y textos enviados a las escenas."
+      },
+      "required": false,
+      "default": "fr",
+      "options": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
         }
       ]
-    },
-    {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
-    },
-    {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
-      },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
-    },
-    {
-      "key": "unit",
-      "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
-      "required": false,
-      "default": "celsius",
-      "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
-      ]
-    },
-    {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
-      "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
-      },
-      "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "create_treatment",
+      "label": {
+        "en": "Create a treatment",
+        "fr": "Créer un traitement",
+        "de": "Behandlung erstellen",
+        "es": "Crear un tratamiento"
+      },
+      "description": {
+        "en": "A new treatment, then to be added in the Discovery tab.",
+        "fr": "Un nouveau traitement, à ajouter ensuite dans l'onglet Découverte.",
+        "de": "Eine neue Behandlung, danach im Tab Erkennung hinzuzufügen.",
+        "es": "Un nuevo tratamiento, que luego se añade en la pestaña Descubrimiento."
+      },
       "fields": [
         {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
+          "key": "name",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Name",
+            "fr": "Nom",
+            "de": "Name",
+            "es": "Nombre"
+          },
+          "description": {
+            "en": "The name shown on the dashboard, e.g. Blood pressure.",
+            "fr": "Le nom affiché au tableau de bord, ex. Tension.",
+            "de": "Der Name im Dashboard, z. B. Blutdruck.",
+            "es": "El nombre que se muestra en el panel, p. ej. Tensión."
+          },
+          "placeholder": {
+            "en": "e.g. Blood pressure",
+            "fr": "ex. Tension",
+            "de": "z. B. Blutdruck",
+            "es": "p. ej. Tensión"
+          }
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person",
+            "fr": "Personne",
+            "de": "Person",
+            "es": "Persona"
+          },
+          "description": {
+            "en": "Who takes it: a Gladys user's name or any name. Optional, used to filter scenes.",
+            "fr": "Qui le prend : le prénom d'un utilisateur de Gladys ou un nom libre. Facultatif, sert à filtrer les scènes.",
+            "de": "Wer es nimmt: der Name eines Gladys-Benutzers oder ein freier Name. Optional, zum Filtern von Szenen.",
+            "es": "Quién lo toma: el nombre de un usuario de Gladys o un nombre libre. Opcional, sirve para filtrar escenas."
+          },
+          "placeholder": {
+            "en": "e.g. Paul",
+            "fr": "ex. Paul",
+            "de": "z. B. Paul",
+            "es": "p. ej. Paul"
+          }
+        },
+        {
+          "key": "times",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Intake times",
+            "fr": "Heures de prise",
+            "de": "Einnahmezeiten",
+            "es": "Horas de toma"
+          },
+          "description": {
+            "en": "Local times, separated by commas, 12 at most.",
+            "fr": "Heures locales, séparées par des virgules, 12 au maximum.",
+            "de": "Ortszeiten, durch Kommas getrennt, höchstens 12.",
+            "es": "Horas locales, separadas por comas, 12 como máximo."
+          },
+          "placeholder": {
+            "en": "e.g. 08:00, 20:00",
+            "fr": "ex. 08:00, 20:00",
+            "de": "z. B. 08:00, 20:00",
+            "es": "p. ej. 08:00, 20:00"
+          }
+        },
+        {
+          "key": "days",
+          "type": "string",
+          "label": {
+            "en": "Days of the week",
+            "fr": "Jours de la semaine",
+            "de": "Wochentage",
+            "es": "Días de la semana"
+          },
+          "description": {
+            "en": "e.g. mon, wed, fri or mon-fri. Empty: every day.",
+            "fr": "ex. lun, mer, ven ou lun-ven. Vide : tous les jours.",
+            "de": "z. B. Mo, Mi, Fr oder Mo-Fr. Leer: jeden Tag.",
+            "es": "p. ej. lun, mié, vie o lun-vie. Vacío: todos los días."
+          },
+          "placeholder": {
+            "en": "e.g. mon-fri",
+            "fr": "ex. lun-ven",
+            "de": "z. B. Mo-Fr",
+            "es": "p. ej. lun-vie"
+          }
+        },
+        {
+          "key": "every_days",
+          "type": "number",
+          "label": {
+            "en": "Every N days",
+            "fr": "Tous les N jours",
+            "de": "Alle N Tage",
+            "es": "Cada N días"
+          },
+          "description": {
+            "en": "Instead of days of the week: 2 for every other day, counted from the first day.",
+            "fr": "À la place des jours de la semaine : 2 pour un jour sur deux, compté depuis le premier jour.",
+            "de": "Statt Wochentagen: 2 für jeden zweiten Tag, ab dem ersten Tag gezählt.",
+            "es": "En lugar de días de la semana: 2 para un día de cada dos, contado desde el primer día."
+          },
+          "min": 1,
+          "max": 365
+        },
+        {
+          "key": "start_date",
+          "type": "string",
+          "label": {
+            "en": "First day",
+            "fr": "Premier jour",
+            "de": "Erster Tag",
+            "es": "Primer día"
+          },
+          "description": {
+            "en": "Empty: today. e.g. 2026-12-01, 01/12/2026 or +1 for tomorrow.",
+            "fr": "Vide : aujourd'hui. ex. 01/12/2026, 2026-12-01 ou +1 pour demain.",
+            "de": "Leer: heute. z. B. 01.12.2026, 2026-12-01 oder +1 für morgen.",
+            "es": "Vacío: hoy. p. ej. 01/12/2026, 2026-12-01 o +1 para mañana."
+          }
+        },
+        {
+          "key": "end_date",
+          "type": "string",
+          "label": {
+            "en": "Last day",
+            "fr": "Dernier jour",
+            "de": "Letzter Tag",
+            "es": "Último día"
+          },
+          "description": {
+            "en": "Optional: the treatment stops after this day. e.g. 2026-12-31 or +7.",
+            "fr": "Facultatif : le traitement s'arrête après ce jour. ex. 31/12/2026 ou +7.",
+            "de": "Optional: Die Behandlung endet nach diesem Tag. z. B. 31.12.2026 oder +7.",
+            "es": "Opcional: el tratamiento termina después de este día. p. ej. 31/12/2026 o +7."
+          }
+        },
+        {
+          "key": "grace_minutes",
+          "type": "number",
+          "label": {
+            "en": "Delay before missed (minutes)",
+            "fr": "Délai d'oubli (minutes)",
+            "de": "Frist bis vergessen (Minuten)",
+            "es": "Plazo de olvido (minutos)"
+          },
+          "description": {
+            "en": "Minutes after the intake time before it counts as missed. Empty: 30.",
+            "fr": "Minutes après l'heure de prise avant de la compter comme oubliée. Vide : 30.",
+            "de": "Minuten nach der Einnahmezeit, bis sie als vergessen gilt. Leer: 30.",
+            "es": "Minutos tras la hora de toma antes de contarla como olvidada. Vacío: 30."
+          },
+          "min": 5,
+          "max": 720
+        },
+        {
+          "key": "dose",
+          "type": "number",
+          "label": {
+            "en": "Units per intake",
+            "fr": "Unités par prise",
+            "de": "Einheiten pro Einnahme",
+            "es": "Unidades por toma"
+          },
+          "description": {
+            "en": "Taken from the stock at each intake. Empty: 1.",
+            "fr": "Retirées du stock à chaque prise. Vide : 1.",
+            "de": "Werden bei jeder Einnahme vom Bestand abgezogen. Leer: 1.",
+            "es": "Se restan de las existencias en cada toma. Vacío: 1."
+          },
+          "min": 1,
+          "max": 100
+        },
+        {
+          "key": "stock",
+          "type": "string",
+          "label": {
+            "en": "Stock (units)",
+            "fr": "Stock (unités)",
+            "de": "Bestand (Einheiten)",
+            "es": "Existencias (unidades)"
+          },
+          "description": {
+            "en": "Optional: pills or doses at home.",
+            "fr": "Facultatif : comprimés ou doses à la maison.",
+            "de": "Optional: Tabletten oder Dosen zu Hause.",
+            "es": "Opcional: comprimidos o dosis en casa."
+          },
+          "placeholder": {
+            "en": "e.g. 30",
+            "fr": "ex. 30",
+            "de": "z. B. 30",
+            "es": "p. ej. 30"
+          }
+        },
+        {
+          "key": "stock_alert",
+          "type": "number",
+          "label": {
+            "en": "Stock alert at",
+            "fr": "Alerte de stock à",
+            "de": "Bestandsalarm bei",
+            "es": "Alerta de existencias en"
+          },
+          "description": {
+            "en": "Optional: the Stock low trigger fires when the stock reaches this level.",
+            "fr": "Facultatif : le déclencheur Stock bas part quand le stock atteint ce niveau.",
+            "de": "Optional: Der Auslöser Bestand niedrig startet, wenn der Bestand diesen Wert erreicht.",
+            "es": "Opcional: el desencadenante Existencias bajas se activa al llegar a este nivel."
+          },
+          "min": 0,
+          "max": 100000
         }
       ]
+    },
+    {
+      "key": "update_treatment",
+      "label": {
+        "en": "Change a treatment",
+        "fr": "Modifier un traitement",
+        "de": "Behandlung ändern",
+        "es": "Modificar un tratamiento"
+      },
+      "description": {
+        "en": "Type its current name, then only what changes: empty fields are kept. Also to refill the stock.",
+        "fr": "Saisissez son nom actuel, puis seulement ce qui change : les champs vides sont gardés. Sert aussi à recharger le stock.",
+        "de": "Gib ihren aktuellen Namen ein, dann nur, was sich ändert: Leere Felder bleiben. Auch zum Auffüllen des Bestands.",
+        "es": "Escriba su nombre actual y solo lo que cambia: los campos vacíos se conservan. También para reponer existencias."
+      },
+      "fields": [
+        {
+          "key": "name",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Current name",
+            "fr": "Nom actuel",
+            "de": "Aktueller Name",
+            "es": "Nombre actual"
+          }
+        },
+        {
+          "key": "new_name",
+          "type": "string",
+          "label": {
+            "en": "New name",
+            "fr": "Nouveau nom",
+            "de": "Neuer Name",
+            "es": "Nuevo nombre"
+          },
+          "description": {
+            "en": "Empty: unchanged.",
+            "fr": "Vide : inchangé.",
+            "de": "Leer: unverändert.",
+            "es": "Vacío: sin cambios."
+          }
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person",
+            "fr": "Personne",
+            "de": "Person",
+            "es": "Persona"
+          },
+          "description": {
+            "en": "Who takes it: a Gladys user's name or any name. Optional, used to filter scenes. - to clear.",
+            "fr": "Qui le prend : le prénom d'un utilisateur de Gladys ou un nom libre. Facultatif, sert à filtrer les scènes. - pour effacer.",
+            "de": "Wer es nimmt: der Name eines Gladys-Benutzers oder ein freier Name. Optional, zum Filtern von Szenen. - zum Löschen.",
+            "es": "Quién lo toma: el nombre de un usuario de Gladys o un nombre libre. Opcional, sirve para filtrar escenas. - para borrar."
+          },
+          "placeholder": {
+            "en": "e.g. Paul",
+            "fr": "ex. Paul",
+            "de": "z. B. Paul",
+            "es": "p. ej. Paul"
+          }
+        },
+        {
+          "key": "times",
+          "type": "string",
+          "label": {
+            "en": "Intake times",
+            "fr": "Heures de prise",
+            "de": "Einnahmezeiten",
+            "es": "Horas de toma"
+          },
+          "description": {
+            "en": "Local times, separated by commas, 12 at most. Empty: unchanged.",
+            "fr": "Heures locales, séparées par des virgules, 12 au maximum. Vide : inchangé.",
+            "de": "Ortszeiten, durch Kommas getrennt, höchstens 12. Leer: unverändert.",
+            "es": "Horas locales, separadas por comas, 12 como máximo. Vacío: sin cambios."
+          },
+          "placeholder": {
+            "en": "e.g. 08:00, 20:00",
+            "fr": "ex. 08:00, 20:00",
+            "de": "z. B. 08:00, 20:00",
+            "es": "p. ej. 08:00, 20:00"
+          }
+        },
+        {
+          "key": "days",
+          "type": "string",
+          "label": {
+            "en": "Days of the week",
+            "fr": "Jours de la semaine",
+            "de": "Wochentage",
+            "es": "Días de la semana"
+          },
+          "description": {
+            "en": "e.g. mon, wed, fri, or all for every day. Empty: unchanged.",
+            "fr": "ex. lun, mer, ven, ou tous pour tous les jours. Vide : inchangé.",
+            "de": "z. B. Mo, Mi, Fr, oder alle für jeden Tag. Leer: unverändert.",
+            "es": "p. ej. lun, mié, vie, o todos para todos los días. Vacío: sin cambios."
+          },
+          "placeholder": {
+            "en": "e.g. mon-fri",
+            "fr": "ex. lun-ven",
+            "de": "z. B. Mo-Fr",
+            "es": "p. ej. lun-vie"
+          }
+        },
+        {
+          "key": "every_days",
+          "type": "number",
+          "label": {
+            "en": "Every N days",
+            "fr": "Tous les N jours",
+            "de": "Alle N Tage",
+            "es": "Cada N días"
+          },
+          "description": {
+            "en": "Instead of days of the week: 2 for every other day, counted from the first day. Empty: unchanged.",
+            "fr": "À la place des jours de la semaine : 2 pour un jour sur deux, compté depuis le premier jour. Vide : inchangé.",
+            "de": "Statt Wochentagen: 2 für jeden zweiten Tag, ab dem ersten Tag gezählt. Leer: unverändert.",
+            "es": "En lugar de días de la semana: 2 para un día de cada dos, contado desde el primer día. Vacío: sin cambios."
+          },
+          "min": 1,
+          "max": 365
+        },
+        {
+          "key": "start_date",
+          "type": "string",
+          "label": {
+            "en": "First day",
+            "fr": "Premier jour",
+            "de": "Erster Tag",
+            "es": "Primer día"
+          },
+          "description": {
+            "en": "e.g. 2026-12-01 or +1 for tomorrow. Empty: unchanged.",
+            "fr": "ex. 01/12/2026 ou +1 pour demain. Vide : inchangé.",
+            "de": "z. B. 01.12.2026 oder +1 für morgen. Leer: unverändert.",
+            "es": "p. ej. 01/12/2026 o +1 para mañana. Vacío: sin cambios."
+          }
+        },
+        {
+          "key": "end_date",
+          "type": "string",
+          "label": {
+            "en": "Last day",
+            "fr": "Dernier jour",
+            "de": "Letzter Tag",
+            "es": "Último día"
+          },
+          "description": {
+            "en": "Optional: the treatment stops after this day. e.g. 2026-12-31 or +7. - to clear.",
+            "fr": "Facultatif : le traitement s'arrête après ce jour. ex. 31/12/2026 ou +7. - pour effacer.",
+            "de": "Optional: Die Behandlung endet nach diesem Tag. z. B. 31.12.2026 oder +7. - zum Löschen.",
+            "es": "Opcional: el tratamiento termina después de este día. p. ej. 31/12/2026 o +7. - para borrar."
+          }
+        },
+        {
+          "key": "grace_minutes",
+          "type": "number",
+          "label": {
+            "en": "Delay before missed (minutes)",
+            "fr": "Délai d'oubli (minutes)",
+            "de": "Frist bis vergessen (Minuten)",
+            "es": "Plazo de olvido (minutos)"
+          },
+          "description": {
+            "en": "Minutes after the intake time before it counts as missed. Empty: unchanged.",
+            "fr": "Minutes après l'heure de prise avant de la compter comme oubliée. Vide : inchangé.",
+            "de": "Minuten nach der Einnahmezeit, bis sie als vergessen gilt. Leer: unverändert.",
+            "es": "Minutos tras la hora de toma antes de contarla como olvidada. Vacío: sin cambios."
+          },
+          "min": 5,
+          "max": 720
+        },
+        {
+          "key": "dose",
+          "type": "number",
+          "label": {
+            "en": "Units per intake",
+            "fr": "Unités par prise",
+            "de": "Einheiten pro Einnahme",
+            "es": "Unidades por toma"
+          },
+          "description": {
+            "en": "Taken from the stock at each intake. Empty: unchanged.",
+            "fr": "Retirées du stock à chaque prise. Vide : inchangé.",
+            "de": "Werden bei jeder Einnahme vom Bestand abgezogen. Leer: unverändert.",
+            "es": "Se restan de las existencias en cada toma. Vacío: sin cambios."
+          },
+          "min": 1,
+          "max": 100
+        },
+        {
+          "key": "stock",
+          "type": "string",
+          "label": {
+            "en": "Stock (units)",
+            "fr": "Stock (unités)",
+            "de": "Bestand (Einheiten)",
+            "es": "Existencias (unidades)"
+          },
+          "description": {
+            "en": "New stock, or +30 to add a box. - to clear.",
+            "fr": "Nouveau stock, ou +30 pour ajouter une boîte. - pour effacer.",
+            "de": "Neuer Bestand, oder +30, um eine Packung hinzuzufügen. - zum Löschen.",
+            "es": "Nuevas existencias, o +30 para añadir una caja. - para borrar."
+          },
+          "placeholder": {
+            "en": "e.g. +30",
+            "fr": "ex. +30",
+            "de": "z. B. +30",
+            "es": "p. ej. +30"
+          }
+        },
+        {
+          "key": "stock_alert",
+          "type": "number",
+          "label": {
+            "en": "Stock alert at",
+            "fr": "Alerte de stock à",
+            "de": "Bestandsalarm bei",
+            "es": "Alerta de existencias en"
+          },
+          "description": {
+            "en": "Optional: the Stock low trigger fires when the stock reaches this level. Empty: unchanged.",
+            "fr": "Facultatif : le déclencheur Stock bas part quand le stock atteint ce niveau. Vide : inchangé.",
+            "de": "Optional: Der Auslöser Bestand niedrig startet, wenn der Bestand diesen Wert erreicht. Leer: unverändert.",
+            "es": "Opcional: el desencadenante Existencias bajas se activa al llegar a este nivel. Vacío: sin cambios."
+          },
+          "min": 0,
+          "max": 100000
+        }
+      ]
+    },
+    {
+      "key": "delete_treatment",
+      "label": {
+        "en": "Delete a treatment",
+        "fr": "Supprimer un traitement",
+        "de": "Behandlung löschen",
+        "es": "Eliminar un tratamiento"
+      },
+      "description": {
+        "en": "Deletes the treatment and its history of intakes, for good. Type its exact name to confirm.",
+        "fr": "Supprime le traitement et son historique de prises, définitivement. Saisissez son nom exact pour confirmer.",
+        "de": "Löscht die Behandlung und ihren Einnahmeverlauf endgültig. Gib zur Bestätigung ihren genauen Namen ein.",
+        "es": "Elimina el tratamiento y su historial de tomas, de forma definitiva. Escriba su nombre exacto para confirmar."
+      },
+      "fields": [
+        {
+          "key": "name",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Name of the treatment",
+            "fr": "Nom du traitement",
+            "de": "Name der Behandlung",
+            "es": "Nombre del tratamiento"
+          }
+        }
+      ]
+    },
+    {
+      "key": "show_treatments",
+      "label": {
+        "en": "Show the treatments",
+        "fr": "Afficher les traitements",
+        "de": "Behandlungen anzeigen",
+        "es": "Mostrar los tratamientos"
+      },
+      "description": {
+        "en": "The treatments, their times, next intake and stock.",
+        "fr": "Les traitements, leurs heures, la prochaine prise et le stock.",
+        "de": "Die Behandlungen, ihre Zeiten, die nächste Einnahme und der Bestand.",
+        "es": "Los tratamientos, sus horas, la próxima toma y las existencias."
+      }
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "intake_due",
+      "label": {
+        "en": "Time to take a medication",
+        "fr": "C'est l'heure d'un médicament",
+        "de": "Zeit für ein Medikament",
+        "es": "Hora de tomar un medicamento"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "An intake time is reached and it is not marked as taken yet. Once per intake.",
+        "fr": "L'heure d'une prise est arrivée et elle n'est pas encore notée comme prise. Une fois par prise.",
+        "de": "Eine Einnahmezeit ist erreicht und noch nicht als eingenommen markiert. Einmal pro Einnahme.",
+        "es": "Ha llegado la hora de una toma y aún no está marcada como tomada. Una vez por toma."
       },
       "fields": [
         {
-          "key": "device",
+          "key": "treatment",
           "type": "select",
-          "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "label": {
+            "en": "Treatment (empty: any)",
+            "fr": "Traitement (vide : tous)",
+            "de": "Behandlung (leer: alle)",
+            "es": "Tratamiento (vacío: todos)"
+          },
+          "source": "devices"
         },
         {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
-          "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
-          ]
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person (empty: anyone)",
+            "fr": "Personne (vide : tous)",
+            "de": "Person (leer: alle)",
+            "es": "Persona (vacío: todos)"
+          },
+          "description": {
+            "en": "The person typed in the treatment, exactly.",
+            "fr": "La personne saisie dans le traitement, à l'identique.",
+            "de": "Die in der Behandlung eingetragene Person, genau so.",
+            "es": "La persona indicada en el tratamiento, tal cual."
+          }
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "treatment_name",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Treatment",
+            "fr": "Traitement",
+            "de": "Behandlung",
+            "es": "Tratamiento"
+          }
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person",
+            "fr": "Personne",
+            "de": "Person",
+            "es": "Persona"
+          }
+        },
+        {
+          "key": "time",
+          "type": "string",
+          "label": {
+            "en": "Intake time",
+            "fr": "Heure de prise",
+            "de": "Einnahmezeit",
+            "es": "Hora de toma"
+          }
+        },
+        {
+          "key": "dose",
+          "type": "number",
+          "label": {
+            "en": "Units",
+            "fr": "Unités",
+            "de": "Einheiten",
+            "es": "Unidades"
+          }
+        }
+      ]
+    },
+    {
+      "key": "intake_missed",
+      "label": {
+        "en": "Medication intake missed",
+        "fr": "Prise de médicament oubliée",
+        "de": "Medikamenteneinnahme vergessen",
+        "es": "Toma de medicamento olvidada"
+      },
+      "description": {
+        "en": "An intake is still not marked as taken once its delay is over. Once per intake: alert a relative.",
+        "fr": "Une prise n'est toujours pas notée comme prise à la fin de son délai. Une fois par prise : prévenez un proche.",
+        "de": "Eine Einnahme ist nach Ablauf ihrer Frist noch nicht markiert. Einmal pro Einnahme: Benachrichtige Angehörige.",
+        "es": "Una toma sigue sin marcarse al acabar su plazo. Una vez por toma: avise a un familiar."
+      },
+      "fields": [
+        {
+          "key": "treatment",
+          "type": "select",
+          "label": {
+            "en": "Treatment (empty: any)",
+            "fr": "Traitement (vide : tous)",
+            "de": "Behandlung (leer: alle)",
+            "es": "Tratamiento (vacío: todos)"
+          },
+          "source": "devices"
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person (empty: anyone)",
+            "fr": "Personne (vide : tous)",
+            "de": "Person (leer: alle)",
+            "es": "Persona (vacío: todos)"
+          },
+          "description": {
+            "en": "The person typed in the treatment, exactly.",
+            "fr": "La personne saisie dans le traitement, à l'identique.",
+            "de": "Die in der Behandlung eingetragene Person, genau so.",
+            "es": "La persona indicada en el tratamiento, tal cual."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "treatment_name",
+          "type": "string",
+          "label": {
+            "en": "Treatment",
+            "fr": "Traitement",
+            "de": "Behandlung",
+            "es": "Tratamiento"
+          }
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person",
+            "fr": "Personne",
+            "de": "Person",
+            "es": "Persona"
+          }
+        },
+        {
+          "key": "time",
+          "type": "string",
+          "label": {
+            "en": "Intake time",
+            "fr": "Heure de prise",
+            "de": "Einnahmezeit",
+            "es": "Hora de toma"
+          }
+        },
+        {
+          "key": "minutes_late",
+          "type": "number",
+          "label": {
+            "en": "Minutes late",
+            "fr": "Minutes de retard",
+            "de": "Minuten Verspätung",
+            "es": "Minutos de retraso"
+          }
+        }
+      ]
+    },
+    {
+      "key": "stock_low",
+      "label": {
+        "en": "Medication stock low",
+        "fr": "Stock de médicament bas",
+        "de": "Medikamentenbestand niedrig",
+        "es": "Existencias de medicamento bajas"
+      },
+      "description": {
+        "en": "The stock reached its alert level. Once, until it is refilled above it.",
+        "fr": "Le stock a atteint son niveau d'alerte. Une fois, jusqu'à ce qu'il soit rechargé au-dessus.",
+        "de": "Der Bestand hat seinen Alarmwert erreicht. Einmal, bis er darüber aufgefüllt wird.",
+        "es": "Las existencias han llegado a su nivel de alerta. Una vez, hasta reponerlas por encima."
+      },
+      "fields": [
+        {
+          "key": "treatment",
+          "type": "select",
+          "label": {
+            "en": "Treatment (empty: any)",
+            "fr": "Traitement (vide : tous)",
+            "de": "Behandlung (leer: alle)",
+            "es": "Tratamiento (vacío: todos)"
+          },
+          "source": "devices"
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person (empty: anyone)",
+            "fr": "Personne (vide : tous)",
+            "de": "Person (leer: alle)",
+            "es": "Persona (vacío: todos)"
+          },
+          "description": {
+            "en": "The person typed in the treatment, exactly.",
+            "fr": "La personne saisie dans le traitement, à l'identique.",
+            "de": "Die in der Behandlung eingetragene Person, genau so.",
+            "es": "La persona indicada en el tratamiento, tal cual."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "treatment_name",
+          "type": "string",
+          "label": {
+            "en": "Treatment",
+            "fr": "Traitement",
+            "de": "Behandlung",
+            "es": "Tratamiento"
+          }
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person",
+            "fr": "Personne",
+            "de": "Person",
+            "es": "Persona"
+          }
+        },
+        {
+          "key": "stock",
+          "type": "number",
+          "label": {
+            "en": "Stock left",
+            "fr": "Stock restant",
+            "de": "Restbestand",
+            "es": "Existencias restantes"
+          }
+        },
+        {
+          "key": "days_left",
+          "type": "number",
+          "label": {
+            "en": "Days left",
+            "fr": "Jours restants",
+            "de": "Verbleibende Tage",
+            "es": "Días restantes"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
+      "key": "mark_taken",
+      "label": {
+        "en": "Mark a medication as taken",
+        "fr": "Noter un médicament comme pris",
+        "de": "Medikament als eingenommen markieren",
+        "es": "Marcar un medicamento como tomado"
+      },
       "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+        "en": "The nearest intake within 12 hours, or the intake of today at a given time. Takes the dose from the stock.",
+        "fr": "La prise la plus proche à 12 heures près, ou celle d'aujourd'hui à une heure donnée. Retire la dose du stock.",
+        "de": "Die nächste Einnahme innerhalb von 12 Stunden oder die heutige zu einer Uhrzeit. Zieht die Dosis vom Bestand ab.",
+        "es": "La toma más cercana en 12 horas, o la de hoy a una hora dada. Resta la dosis de las existencias."
       },
       "timeout_seconds": 15,
       "fields": [
         {
-          "key": "device",
+          "key": "treatment",
           "type": "select",
+          "label": {
+            "en": "Treatment",
+            "fr": "Traitement",
+            "de": "Behandlung",
+            "es": "Tratamiento"
+          },
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "required": true
+        },
+        {
+          "key": "time",
+          "type": "string",
+          "label": {
+            "en": "Intake time (optional)",
+            "fr": "Heure de prise (facultatif)",
+            "de": "Einnahmezeit (optional)",
+            "es": "Hora de toma (opcional)"
+          },
+          "description": {
+            "en": "Empty: the nearest intake not taken yet.",
+            "fr": "Vide : la prise la plus proche pas encore prise.",
+            "de": "Leer: die nächste noch nicht eingenommene Einnahme.",
+            "es": "Vacío: la toma más cercana aún no tomada."
+          },
+          "placeholder": {
+            "en": "e.g. 08:00",
+            "fr": "ex. 08:00",
+            "de": "z. B. 08:00",
+            "es": "p. ej. 08:00"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "key": "treatment_name",
+          "type": "string",
+          "label": {
+            "en": "Treatment",
+            "fr": "Traitement",
+            "de": "Behandlung",
+            "es": "Tratamiento"
+          }
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person",
+            "fr": "Personne",
+            "de": "Person",
+            "es": "Persona"
+          }
+        },
+        {
+          "key": "time",
+          "type": "string",
+          "label": {
+            "en": "Intake time",
+            "fr": "Heure de prise",
+            "de": "Einnahmezeit",
+            "es": "Hora de toma"
+          }
+        },
+        {
+          "key": "already_taken",
+          "type": "boolean",
+          "label": {
+            "en": "Was already taken",
+            "fr": "Était déjà prise",
+            "de": "War schon eingenommen",
+            "es": "Ya estaba tomada"
+          }
+        },
+        {
+          "key": "taken_today",
+          "type": "number",
+          "label": {
+            "en": "Taken today",
+            "fr": "Prises faites aujourd'hui",
+            "de": "Heute eingenommen",
+            "es": "Tomas hechas hoy"
+          }
+        },
+        {
+          "key": "planned_today",
+          "type": "number",
+          "label": {
+            "en": "Planned today",
+            "fr": "Prises prévues aujourd'hui",
+            "de": "Heute geplant",
+            "es": "Tomas previstas hoy"
+          }
+        },
+        {
+          "key": "stock",
+          "type": "number",
+          "label": {
+            "en": "Stock left",
+            "fr": "Stock restant",
+            "de": "Restbestand",
+            "es": "Existencias restantes"
+          }
+        }
+      ]
+    },
+    {
+      "key": "read_today",
+      "label": {
+        "en": "Read a treatment's day",
+        "fr": "Lire la journée d'un traitement",
+        "de": "Tag einer Behandlung lesen",
+        "es": "Leer el día de un tratamiento"
+      },
+      "description": {
+        "en": "Intakes taken, planned and late today, and the next one: for an evening summary.",
+        "fr": "Prises faites, prévues et en retard du jour, et la prochaine : pour un bilan du soir.",
+        "de": "Heute eingenommene, geplante und verspätete Einnahmen und die nächste: für eine Abendbilanz.",
+        "es": "Tomas hechas, previstas y atrasadas de hoy, y la próxima: para un resumen de la noche."
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "treatment",
+          "type": "select",
+          "label": {
+            "en": "Treatment",
+            "fr": "Traitement",
+            "de": "Behandlung",
+            "es": "Tratamiento"
+          },
+          "source": "devices",
           "required": true
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "treatment_name",
+          "type": "string",
+          "label": {
+            "en": "Treatment",
+            "fr": "Traitement",
+            "de": "Behandlung",
+            "es": "Tratamiento"
+          }
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person",
+            "fr": "Personne",
+            "de": "Person",
+            "es": "Persona"
+          }
+        },
+        {
+          "key": "taken_today",
+          "type": "number",
+          "label": {
+            "en": "Taken today",
+            "fr": "Prises faites aujourd'hui",
+            "de": "Heute eingenommen",
+            "es": "Tomas hechas hoy"
+          }
+        },
+        {
+          "key": "planned_today",
+          "type": "number",
+          "label": {
+            "en": "Planned today",
+            "fr": "Prises prévues aujourd'hui",
+            "de": "Heute geplant",
+            "es": "Tomas previstas hoy"
+          }
+        },
+        {
+          "key": "late",
+          "type": "number",
+          "label": {
+            "en": "Late intakes",
+            "fr": "Prises en retard",
+            "de": "Verspätete Einnahmen",
+            "es": "Tomas atrasadas"
+          }
+        },
+        {
+          "key": "next_intake",
+          "type": "string",
+          "label": {
+            "en": "Next intake",
+            "fr": "Prochaine prise",
+            "de": "Nächste Einnahme",
+            "es": "Próxima toma"
+          }
+        },
+        {
+          "key": "stock",
+          "type": "number",
+          "label": {
+            "en": "Stock left",
+            "fr": "Stock restant",
+            "de": "Restbestand",
+            "es": "Existencias restantes"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "today",
+      "label": {
+        "en": "Intakes of the day",
+        "fr": "Prises du jour",
+        "de": "Heutige Einnahmen",
+        "es": "Tomas del día"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "The intakes of the day to tick off, with the missed ones.",
+        "fr": "Les prises du jour à cocher, avec les oubliées.",
+        "de": "Die heutigen Einnahmen zum Abhaken, mit den vergessenen.",
+        "es": "Las tomas del día para marcar, con las olvidadas."
+      },
+      "icon": "check-circle",
+      "action_timeout_seconds": 15,
+      "settings": [
+        {
+          "key": "device",
+          "type": "select",
+          "label": {
+            "en": "Treatment (empty: all)",
+            "fr": "Traitement (vide : tous)",
+            "de": "Behandlung (leer: alle)",
+            "es": "Tratamiento (vacío: todos)"
+          },
+          "source": "devices",
+          "required": false
+        },
+        {
+          "key": "hide",
+          "type": "multi_select",
+          "label": {
+            "en": "Buttons to hide",
+            "fr": "Boutons à masquer",
+            "de": "Auszublendende Schaltflächen",
+            "es": "Botones que ocultar"
+          },
+          "required": false,
+          "options": [
+            {
+              "value": "take",
+              "label": {
+                "en": "Taken",
+                "fr": "Pris",
+                "de": "Eingenommen",
+                "es": "Tomado"
+              }
+            },
+            {
+              "value": "undo",
+              "label": {
+                "en": "Cancel an intake",
+                "fr": "Annuler une prise",
+                "de": "Einnahme zurücknehmen",
+                "es": "Anular una toma"
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

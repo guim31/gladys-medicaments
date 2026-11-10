@@ -1,41 +1,58 @@
 // -----------------------------------------------------------------------------
-// Scene actions (SDK v0.14+, Gladys 5.1+).
+// Scene action handlers (manifest `scene_actions`, Gladys 5.1+). The
+// treatment is a device of the integration (`source: "devices"`).
 //
-// A scene action is an OPERATION a scene author places in a scene, with
-// parameters and a result: "identify this device", "take a snapshot", "clean
-// these rooms". Each one is declared in the manifest `scene_actions` field
-// (key, label, `fields` in the config_schema grammar, scalar `outputs`) and
-// handled here, keyed by that same `key`; index.js registers every entry with
-// `gladys.onSceneAction(key, ...)`.
+// - `mark_taken`: an NFC tag on the pill box, a button, a voice routine:
+//   the nearest intake within 12 hours, or the intake of today at a time;
+// - `read_today`: the figures of the day, for an evening summary message.
 //
-// Scene TRIGGERS are the other direction ("this happened"): they are fired by
-// the device that observes the event, see src/devices/motionSensor.js.
-//
-// The rules that matter:
-//   - `fields` arrive RESOLVED: scene variables substituted, defaults applied,
-//     validated by the core; a `"source": "devices"` field is the chosen
-//     device external_id;
-//   - resolve an object of the declared `outputs` (scalars only), readable by
-//     the following actions of the scene, or `undefined` for none. Keys not
-//     declared in the manifest are dropped by the core;
-//   - throwing fails THIS action only: the scene logs it and continues. A
-//     scene action is never a condition: return an output and let the scene
-//     author gate on it;
-//   - never fire a scene event as a consequence of a received action: a scene
-//     bound to that event would loop through the integration.
+// Errors are thrown in the configured language: a scene shows them as is.
 // -----------------------------------------------------------------------------
 
-import { createLogger } from '@gladysassistant/integration-sdk';
-import { signalDevice } from './devices/index.js';
+import { UserError } from './texts.js';
 
-const logger = createLogger({ name: 'scenes' });
-
-export const SCENE_ACTIONS = {
-  // The ack is awaited under the action's `timeout_seconds` (15 s in the
-  // manifest), counted from the moment the scene reaches the action.
-  async identify_device(gladys, { fields, config }) {
-    logger.info(`Scene action identify_device <- ${fields.device}`);
-    const signalled = await signalDevice(gladys, fields.device, config);
-    return { signalled };
-  },
+const localize = (hub, fn) => async (fields) => {
+  try {
+    return await fn(fields ?? {});
+  } catch (err) {
+    throw err instanceof UserError ? new Error(err.localized(hub.config.language)) : err;
+  }
 };
+
+export function sceneActions(hub) {
+  return {
+    mark_taken: localize(hub, async (fields) => {
+      const { treatment, slot, already } = await hub.take({
+        device: fields.treatment,
+        time: fields.time,
+        source: 'scene',
+      });
+      const current = hub.treatments.find((entry) => entry.id === treatment.id) ?? treatment;
+      const status = hub.status(current);
+      return {
+        treatment_name: hub.displayName(current),
+        person: current.person,
+        time: slot.slice(11),
+        already_taken: already,
+        taken_today: status.taken,
+        planned_today: status.planned,
+        ...(current.stock !== null ? { stock: Math.floor(current.stock) } : {}),
+      };
+    }),
+
+    read_today: localize(hub, async (fields) => {
+      const { treatment, next, taken, planned, late } = hub.readToday(fields.treatment);
+      return {
+        treatment_name: hub.displayName(treatment),
+        person: treatment.person,
+        taken_today: taken,
+        planned_today: planned,
+        late,
+        next_intake: next,
+        ...(treatment.stock !== null ? { stock: Math.floor(treatment.stock) } : {}),
+      };
+    }),
+  };
+}
+
+export const SCENE_ACTION_KEYS = Object.keys(sceneActions({ config: {} }));

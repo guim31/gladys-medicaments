@@ -1,67 +1,127 @@
-# Template de démonstration
+# Rappels de médicaments
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+> **Ce n'est pas un dispositif médical.** Cette intégration n'est pas un dispositif médical mais un aide-mémoire,
+> qui peut faillir (Gladys arrêtée, coupure de courant, scène qui ne part pas). Ne comptez jamais sur elle seule
+> pour un traitement où une dose oubliée ou doublée est dangereuse : suivez les consignes de votre médecin et de
+> votre pharmacien.
 
-## Ce que vous obtenez
+Les médicaments du foyer, **gardés dans Gladys elle-même** : heures de prise, un bouton **Pris** au tableau de
+bord, une scène quand c'est l'heure, une autre quand une prise est oubliée (pour prévenir un proche), et une alerte
+avant que la boîte soit vide. Ni compte, ni cloud : rien ne sort de la maison.
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+> **Vos retours sont les bienvenus.** Cette intégration a été testée avec le Gladys de test du SDK et dans son image
+> Docker, pas encore au quotidien avec un vrai Gladys. Si quelque chose ne marche pas comme décrit, dites-le sur le
+> [forum Gladys](https://community.gladysassistant.com) ou dans les
+> [issues](https://github.com/guim31/gladys-medicaments/issues).
 
-## Configuration
+## Ce qu'il faut
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+- Gladys Assistant 5.2.0 ou plus récent (les formulaires des boutons de widget).
+- Rien d'autre : les traitements sont enregistrés par l'intégration dans son propre volume.
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+## Mise en place
 
-## Actions
+1. Installez l'intégration, ouvrez son onglet **Configuration**.
+2. **Créer un traitement** :
+   - **Nom** (ex. `Tension`) et, si vous voulez, **Personne** : qui le prend, le prénom d'un utilisateur de Gladys
+     ou un nom libre ;
+   - **Heures de prise**, heures locales séparées par des virgules : `08:00, 20:00` ;
+   - **Jours de la semaine** (`lun, mer, ven`, `lun-ven` ; vide : tous les jours) **ou Tous les N jours** (`2` : un
+     jour sur deux, compté depuis le premier jour) ;
+   - **Premier jour** et **Dernier jour** (facultatifs) : `01/12/2026`, `2026-12-01`, ou `+7` pour dans sept jours ;
+   - **Délai d'oubli (minutes)** : combien de temps après l'heure de prise elle compte comme oubliée (30 par
+     défaut, de 5 à 720) ;
+   - **Unités par prise**, **Stock (unités)** et **Alerte de stock à** (facultatifs) : le stock baisse à chaque
+     prise, et une scène peut vous prévenir quand il atteint le niveau d'alerte.
+3. Ouvrez l'onglet **Découverte** et ajoutez le traitement : il devient un appareil de Gladys, que vous pouvez
+   renommer et placer dans une pièce.
+4. Ajoutez le widget **Prises du jour** à un tableau de bord.
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+**Modifier un traitement** : saisissez son nom actuel, puis seulement ce qui change (les champs vides sont gardés).
+Saisissez `-` pour effacer la personne, le dernier jour ou le stock. Sert aussi à recharger : **Stock (unités)**
+`+30` ajoute une boîte de 30. Un nouvel horaire s'applique tout de suite ; les prises qu'il place plus tôt dans la
+journée ne comptent pas comme oubliées.
 
-## Scènes
+**Afficher les traitements** les liste avec leurs heures, la prochaine prise et le stock. **Supprimer un
+traitement** le supprime avec son historique, définitivement : saisissez son nom exact pour confirmer, puis
+supprimez aussi son appareil dans Gladys.
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+**Langue des noms de fonctionnalités** : la langue des noms donnés aux fonctionnalités à l'ajout d'un traitement,
+et des textes envoyés aux scènes (français par défaut).
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+## Appareils
+
+Un appareil par traitement, avec :
+
+- **Prochaine prise** : `aujourd'hui 20:00`, `demain 08:00`, `lun. 08:00`, ou `Traitement terminé` ;
+- **Prises faites aujourd'hui** et **Prises prévues aujourd'hui** : les prises du jour ;
+- **Prises en retard** : les prises des dernières 24 heures non prises une fois leur délai passé (une scène peut
+  surveiller « supérieur à 0 ») ;
+- **Stock restant** : seulement si un stock est indiqué.
+
+Une prise notée en avance (jusqu'à 12 heures avant) compte pour son heure : elle ne déclenche ni « c'est l'heure »
+ni oubli.
 
 ## Tableau de bord
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+Le widget **Prises du jour** liste les prises du jour (et celles oubliées hier, pendant 24 heures) avec leur état :
+prise et à quelle heure, à prendre, oubliée, à venir. **Pris** ouvre la liste des prises pas encore faites, les
+oubliées en premier ; **Annuler une prise** défait un appui par erreur (le stock récupère la dose). Dans ses
+réglages : un traitement ou tous, et les boutons à masquer.
+
+## Scènes
+
+### Déclencheurs
+
+- **C'est l'heure d'un médicament** : l'heure d'une prise est arrivée et elle n'est pas notée comme prise.
+  Variables : traitement, personne, heure de prise, unités.
+- **Prise de médicament oubliée** : la prise n'est toujours pas notée à la fin de son délai. Variables :
+  traitement, personne, heure de prise, minutes de retard.
+- **Stock de médicament bas** : le stock a atteint son niveau d'alerte, une fois jusqu'à ce qu'il soit rechargé
+  au-dessus. Variables : traitement, personne, stock restant, jours restants.
+
+Chacun part une fois par prise, même si Gladys ou l'intégration redémarre entre-temps, et peut être filtré sur un
+traitement et sur une personne (saisie à l'identique du traitement).
+
+### Actions
+
+- **Noter un médicament comme pris** : la prise la plus proche à 12 heures près, ou celle d'aujourd'hui à une heure
+  donnée (`08:00`). Pour un tag NFC collé sur le pilulier, un bouton ou une routine vocale.
+- **Lire la journée d'un traitement** : prises faites, prévues et en retard, la prochaine et le stock, pour un
+  message de bilan le soir.
+
+### Exemple de scène : prise oubliée, message à un proche
+
+1. Déclencheur **Prise de médicament oubliée**, traitement `Tension` (ou vide pour tous).
+2. Action **Envoyer un message** (Telegram, notification…) au proche :
+
+   ```text
+   {{triggerEvent.data.person}} n'a pas pris {{triggerEvent.data.treatment_name}} (prévu à {{triggerEvent.data.time}}).
+   ```
+
+Même idée avec **C'est l'heure d'un médicament** pour le faire dire par une enceinte, et avec **Stock de médicament
+bas** pour ajouter la boîte à une liste de courses.
+
+## Vos données
+
+Tout reste dans le volume de l'intégration (`/data/medications.json`, avec une copie de secours) : les traitements,
+et les prises des 8 derniers jours, effacées ensuite. Rien n'est envoyé hors de la maison. Les noms des traitements
+et des personnes n'apparaissent jamais dans les logs, même en debug.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+- **Pas de « c'est l'heure » à l'heure** : vérifiez le fuseau horaire de Gladys (Paramètres → Système) : les heures
+  de prise sont des heures locales. Vérifiez que la scène est active.
+- **Une prise manque aujourd'hui** : un traitement créé ou modifié dans la journée part de ce moment ; les prises
+  d'avant ne comptent pas.
+- **Erreur sur le widget** : le traitement a été supprimé ; choisissez-en un autre dans ses réglages.
+- Les logs sont dans **Intégrations → Rappels de médicaments → Logs**.
+
+## Limites
+
+- Pas un dispositif médical : un aide-mémoire, qui peut faillir.
+- 30 traitements, 12 heures de prise par jour chacun ; unités entières seulement (comptez les demi-comprimés comme
+  unités).
+- Pas de questions-réponses avec l'assistant de Gladys : seulement les scènes.
+- Une heure de prise sautée par le passage à l'heure d'été est due quand l'horloge affiche la minute suivante
+  (03:00) ; celle qui a lieu deux fois en automne n'est signalée qu'une fois.

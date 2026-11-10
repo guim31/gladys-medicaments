@@ -30,6 +30,15 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+The integration talks to no service other than Gladys: no network access is
+needed beyond the Gladys host API. It stores the treatments, and nothing else,
+in `/data/medications.json` (with `medications.json.bak`, the previous version,
+and `medications.json.corrupt` when an unreadable file was kept aside). These
+files hold **health data** (treatment names, persons, intake times and the
+intakes of the last 8 days) but no secret; they are readable by whoever can
+read the integration volume on the Gladys host. The logs never contain the
+names of the treatments nor of the persons.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
 and the third-party services and devices the integration talks to.

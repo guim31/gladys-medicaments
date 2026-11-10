@@ -32,14 +32,18 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+src/app.js                        registers every handler on the SDK (or its fake Gladys)
+src/hub.js                        treatments in memory, every change (serialized), events, minute timer
+src/store.js                      /data/medications.json: atomic write, backup, corrupt file kept aside
+src/model.js                      document schema (version 1), normalization, limits, slot pruning
+src/schedule.js                   intake slots in the local time of Gladys (TZ), form parsing
+src/devices.js                    one device per treatment: next intake, taken/planned, late, stock
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/widgets.js                    the "today" dashboard widget (manifest `widgets`)
+src/texts.js                      messages in four languages, UserError, "next intake" text
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (mandatory)
 test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
@@ -251,3 +255,37 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+## Rappels de médicaments (cette intégration)
+
+- **Pas un dispositif médical** : le dire en tête de chaque doc (test `i18n`). **Aucun nom de traitement ni de
+  personne dans les journaux, même en debug** : un traitement est journalisé par son id aléatoire (test `logs`).
+  Rien ne sort de la maison : aucun accès réseau hors de l'API de Gladys.
+- **Modèle** : `/data/medications.json` (`schema: 1`), même mécanique d'écriture que gladys-local-lists
+  (`TreatmentsHub.mutate` : une modification à la fois, sur une copie, écrite avant de devenir l'état courant).
+  Une prise est un « slot », sa minute locale `YYYY-MM-DDTHH:MM` ; `slots[slot]` garde `taken_at`, `due_sent`,
+  `missed_sent`, 8 jours (`pruneSlots`).
+- **Heure locale** : les slots se comparent en chaînes à `localNow(now, TZ)`. Le **délai d'oubli court en temps
+  réel** (`instantOf`) : au passage à l'heure d'été, 02:30 n'existe pas, il est dû à 03:00 et son délai part de
+  03:30 (décalage de la veille), jamais « oublié » à la minute où il devient dû. En automne, le 02:30 doublé n'est
+  signalé qu'une fois et reste « oublié » quand l'horloge repasse à 02:00 (`slotState` compare d'abord l'instant ;
+  `pastSlots` regarde une heure devant l'horloge).
+- **`since`** (création ou dernier changement d'horaire) : les slots d'avant ne sont ni prévus ni oubliés, sauf ceux
+  qui ont déjà un enregistrement (prise déjà signalée, faite) : ajouter une heure ne fait pas disparaître la pilule
+  du matin en retard (`slotsOn`).
+- **Déclencheurs** : `intake_due` quand l'heure arrive (pas si la prise est déjà notée), `intake_missed` à la fin du
+  délai, chacun une fois, enregistré seulement après acceptation par Gladys (`sentPending` évite un doublon si
+  l'écriture échoue). Fenêtre de 24 h : après un long arrêt, les prises manquées partent en « oubliée », jamais en
+  « c'est l'heure ». `stock_low` part du minuteur (lancé aussi juste après chaque modification), `stock_low_notified` posé seulement après
+  acceptation, réarmé au-dessus du seuil. `stock_used` garde ce qui a vraiment été retiré du stock (rendu à
+  l'annulation). Un JSON illisible n'est journalisé que par son type et sa position (le message cite le début du
+  fichier).
+- **« Pris » sans heure** : la prise non faite la plus proche à ±12 h (égalité : la plus ancienne). Une prise notée en
+  avance compte pour son heure et ne déclenche rien.
+- **Formulaires** : les champs vides de `update_treatment` gardent la valeur, `-` efface (personne, dernier jour,
+  stock), `+N` ajoute au stock. Les `number` facultatifs arrivent vides ou en chaîne : `optionalInt`. Pas de
+  source « utilisateurs » pour un champ : la personne est un texte libre, filtrable à l'identique dans les scènes.
+- **Widget** : options des formulaires `"<id>|<slot>"` ; `ttl_seconds: 60` et un `requestWidgetRefresh` quand
+  l'état d'une ligne change au minuteur (signature calculée à chaque tick).
+- `Intl.DateTimeFormat` est mis en cache par fuseau (`schedule.js`) : le minuteur en appelle des milliers par minute
+  avec 30 traitements.
